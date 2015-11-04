@@ -303,3 +303,56 @@ Percentage of the requests served within a certain time (ms)
  100%     31 (longest request)
 ```
 Как видим, `Time taken for tests` в случае `FAST` запросов не сильно изменился (2.536 по сравнению с 3.545). В случае `SLOW` запросов этот показатель уменьшился в 10 раз, как и ожидалось. Это связано с тем, что в случае `FAST` запросов основновное время занимают накладные расходы, а не логика самого запроса.
+
+##### Нагрузка на `task_queue`
+У пула тредов есть очередь задач. Если все треды заняты, задача ставится в очередь. Проверим, насколько хорошо это работает...
+```
+midenok@lian:~/src/server-demo/build$ ./server-demo -C 1000 -A 100 -w 1
+```
+---
+```
+midenok@lian:~$ ab -qn 500 -c 100 127.0.0.1:9000/test/slow
+This is ApacheBench, Version 2.3 <$Revision: 1638069 $>
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking 127.0.0.1 (be patient).....done
+
+
+Server Software:
+Server Hostname:        127.0.0.1
+Server Port:            9000
+
+Document Path:          /test/slow
+Document Length:        0 bytes
+
+Concurrency Level:      100
+Time taken for tests:   15.053 seconds
+Complete requests:      500
+Failed requests:        0
+Total transferred:      28500 bytes
+HTML transferred:       0 bytes
+Requests per second:    33.22 [#/sec] (mean)
+Time per request:       3010.562 [ms] (mean)
+Time per request:       30.106 [ms] (mean, across all concurrent requests)
+Transfer rate:          1.85 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0    1   1.0      0       4
+Processing:    37 2712 709.5   3008    3015
+Waiting:       37 2712 709.5   3008    3015
+Total:         39 2712 708.7   3008    3016
+
+Percentage of the requests served within a certain time (ms)
+  50%   3008
+  66%   3008
+  75%   3008
+  80%   3008
+  90%   3008
+  95%   3009
+  98%   3009
+  99%   3009
+ 100%   3016 (longest request)
+```
+В данном случае, мы создали узкое место 1 worker thread, через которое проходили все `SLOW` запросы. Также, мы создали высокую конкурентность в 100 accept thread для проверки бесперебойности доступа к очереди из нескольких потоков. Как видим, общее время составило 15 секунд, что равно 500 * 30 мс, т.к. все запросы прошли через 1 поток. Очередь отработала нормально: `Complete requests: 500`.
