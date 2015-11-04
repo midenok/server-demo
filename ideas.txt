@@ -1,0 +1,53 @@
+flag = {
+    name      = accept-workers;
+    value     = W;        /* flag style option character */
+    arg-type  = number;   /* option argument indication  */
+    arg-default = 0;
+    max       = 1;  /* occurrence limit (none)     */
+    descrip   = "Number of accept threads that will act as workers (0)"
+    doc       = 'Connection will be processed inside accept thread until this number of accept threads is currently busy.'
+                'In case of busy accept threads limit is reached, connection will be passed to worker thread.'
+                'If this setting is 0, each event loop have its own array of connections (that were accepted in current thread).'
+                'If this setting is not 0, all event loops share the same array of connections (so the connection wont be blocked by busy accept thread).';
+};
+
+flag = {
+    name      = free-threshold;
+    value     = T;
+    arg-type  = number;
+    arg-range = "0->50";
+    arg-default = 0;
+    max       = 1;
+    descrip   = "Free threads percentage when to spawn additional threads (0)";
+    doc       = 'If set to 0, then spawning additional threads is disabled.';
+};
+
+flag = {
+    name      = spawn-hunk;
+    value     = S;
+    arg-type  = number;
+    arg-range = "1->50";
+    arg-default = 50;
+    max       = 1;
+    descrip   = "Spawn this percentage of existing worker threads (50)";
+};
+
+flag = {
+    name      = spawn-factor;
+    value     = F;
+    arg-type  = number;
+    arg-range = "0->90";
+    arg-default = 0;
+    max       = 1;
+    descrip   = "Decrease spawn hunk by this percentage on each spawn (0)";
+    doc       = '0 means spawn hunk percentage is constant.';
+};
+
+flag = {
+    name      = worker-limit;
+    value     = L;
+    arg-type  = number;
+    arg-default = 1000;
+    max       = 1;
+    descrip   = "Maximum total number of threads to spawn (1000)";
+};

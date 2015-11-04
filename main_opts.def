@@ -1,0 +1,60 @@
+AutoGen Definitions options;
+prog-name     = conn-daemon;
+prog-title    = "Connect Daemon Example";
+long-opts;
+gnu-usage;    /* GNU style preferred to default */
+
+flag = {
+    name      = verbose;
+    value     = v;        /* flag style option character */
+    max       = 1;  /* occurrence limit (none)     */
+    descrip   = "Generate debug output to STDOUT";
+};
+
+flag = {
+    name      = port;
+    value     = p;        /* flag style option character */
+    arg-type  = number;   /* option argument indication  */
+    arg-default = 9000;
+    arg-range = "1->";
+    max       = 1;  /* occurrence limit (none)     */
+    descrip   = "Listen port";
+};
+
+flag = {
+    name      = accept-threads;
+    value     = A;        /* flag style option character */
+    arg-type  = number;   /* option argument indication  */
+    arg-range = "1->";
+    max       = 1;  /* occurrence limit (none)     */
+    descrip   = "Number of accept threads (defaults to number of CPU cores)";
+    doc       = 'Each accept thread have its own event loop for processing accepted connections.';
+};
+
+flag = {
+    name      = accept-capacity;
+    value     = C;        /* flag style option character */
+    arg-type  = number;   /* option argument indication  */
+    arg-default = 100000;
+    arg-range = "1->";
+    max       = 1;  /* occurrence limit (none)     */
+    descrip   = "Maximum number of simultaneous accepted connections per 1 accept thread (100 000)";
+};
+
+flag = {
+    name      = worker-threads;
+    value     = w;        /* flag style option character */
+    arg-type  = number;   /* option argument indication  */
+    max       = 1;  /* occurrence limit (none)     */
+    descrip   = "Worker threads to spawn (defaults to number of accept threads)";
+    doc       = 'If set to 0, then processing is done inside accept threads.';
+};
+
+flag = {
+    name      = slow-duration;
+    value     = d;        /* flag style option character */
+    arg-type  = number;   /* option argument indication  */
+    arg-default = 30;
+    max       = 1;  /* occurrence limit (none)     */
+    descrip   = "Slow task delay in milliseconds (30)";
+};
