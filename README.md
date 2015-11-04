@@ -109,10 +109,8 @@ Processing:    30   30   0.0     30      30
 Waiting:       30   30   0.0     30      30
 Total:         30   30   0.0     30      30
 ```
----
 ##### N запросов в 1 потоке
 Для наглядности используется число запросов, суммарно равное примерно 3-м секундам.
----
 ```
 midenok@lian:~$ ab -qn 100000 127.0.0.1:9000/test/fast
 This is ApacheBench, Version 2.3 <$Revision: 1638069 $>
@@ -205,7 +203,6 @@ Percentage of the requests served within a certain time (ms)
   99%     30
  100%     30 (longest request)
 ```
----
 ##### N запросов в 10 потоках
 ---
 ---
