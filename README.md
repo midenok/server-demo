@@ -38,7 +38,7 @@ Content-Length: 0
 
 ##### 1 запрос в 1 потоке
 ```
-midenok@lian:~/src/server-demo/build$ ./server-demo
+midenok@lian:~/src/server-demo/build$ ./server-demo -A 1
 ```
 ---
 ```
@@ -63,10 +63,10 @@ Complete requests:      1
 Failed requests:        0
 Total transferred:      57 bytes
 HTML transferred:       0 bytes
-Requests per second:    4901.96 [#/sec] (mean)
-Time per request:       0.204 [ms] (mean)
-Time per request:       0.204 [ms] (mean, across all concurrent requests)
-Transfer rate:          272.86 [Kbytes/sec] received
+Requests per second:    4000.00 [#/sec] (mean)
+Time per request:       0.250 [ms] (mean)
+Time per request:       0.250 [ms] (mean, across all concurrent requests)
+Transfer rate:          222.66 [Kbytes/sec] received
 
 Connection Times (ms)
               min  mean[+/-sd] median   max
@@ -98,10 +98,10 @@ Complete requests:      1
 Failed requests:        0
 Total transferred:      57 bytes
 HTML transferred:       0 bytes
-Requests per second:    33.02 [#/sec] (mean)
-Time per request:       30.285 [ms] (mean)
-Time per request:       30.285 [ms] (mean, across all concurrent requests)
-Transfer rate:          1.84 [Kbytes/sec] received
+Requests per second:    32.91 [#/sec] (mean)
+Time per request:       30.389 [ms] (mean)
+Time per request:       30.389 [ms] (mean, across all concurrent requests)
+Transfer rate:          1.83 [Kbytes/sec] received
 
 Connection Times (ms)
               min  mean[+/-sd] median   max
@@ -110,6 +110,7 @@ Processing:    30   30   0.0     30      30
 Waiting:       30   30   0.0     30      30
 Total:         30   30   0.0     30      30
 ```
+
 ##### N запросов в 1 потоке
 Для наглядности используется число запросов, суммарно равное примерно 3-м секундам.
 ```
@@ -129,15 +130,15 @@ Document Path:          /test/fast
 Document Length:        0 bytes
 
 Concurrency Level:      1
-Time taken for tests:   3.737 seconds
+Time taken for tests:   3.545 seconds
 Complete requests:      100000
 Failed requests:        0
 Total transferred:      5700000 bytes
 HTML transferred:       0 bytes
-Requests per second:    26758.43 [#/sec] (mean)
-Time per request:       0.037 [ms] (mean)
-Time per request:       0.037 [ms] (mean, across all concurrent requests)
-Transfer rate:          1489.48 [Kbytes/sec] received
+Requests per second:    28211.74 [#/sec] (mean)
+Time per request:       0.035 [ms] (mean)
+Time per request:       0.035 [ms] (mean, across all concurrent requests)
+Transfer rate:          1570.38 [Kbytes/sec] received
 
 Connection Times (ms)
               min  mean[+/-sd] median   max
@@ -156,11 +157,10 @@ Percentage of the requests served within a certain time (ms)
   98%      0
   99%      0
  100%      0 (longest request)
-
 ```
 ---
 ```
-$ ab -qn 100 127.0.0.1:9000/test/slow
+midenok@lian:~$ ab -qn 100 127.0.0.1:9000/test/slow
 This is ApacheBench, Version 2.3 <$Revision: 1638069 $>
 Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
 Licensed to The Apache Software Foundation, http://www.apache.org/
@@ -176,14 +176,14 @@ Document Path:          /test/slow
 Document Length:        0 bytes
 
 Concurrency Level:      1
-Time taken for tests:   3.038 seconds
+Time taken for tests:   3.035 seconds
 Complete requests:      100
 Failed requests:        0
 Total transferred:      5700 bytes
 HTML transferred:       0 bytes
-Requests per second:    32.91 [#/sec] (mean)
-Time per request:       30.382 [ms] (mean)
-Time per request:       30.382 [ms] (mean, across all concurrent requests)
+Requests per second:    32.95 [#/sec] (mean)
+Time per request:       30.352 [ms] (mean)
+Time per request:       30.352 [ms] (mean, across all concurrent requests)
 Transfer rate:          1.83 [Kbytes/sec] received
 
 Connection Times (ms)
@@ -203,7 +203,103 @@ Percentage of the requests served within a certain time (ms)
   98%     30
   99%     30
  100%     30 (longest request)
-```
+ ```
 ##### N запросов в 10 потоках
+```
+midenok@lian:~/src/server-demo/build$ ./server-demo -A 10
+```
 ---
----
+```
+midenok@lian:~$ ab -qn 100000 -c 10 127.0.0.1:9000/test/fast
+This is ApacheBench, Version 2.3 <$Revision: 1638069 $>
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking 127.0.0.1 (be patient).....done
+
+
+Server Software:
+Server Hostname:        127.0.0.1
+Server Port:            9000
+
+Document Path:          /test/fast
+Document Length:        0 bytes
+
+Concurrency Level:      10
+Time taken for tests:   2.536 seconds
+Complete requests:      100000
+Failed requests:        0
+Total transferred:      5700000 bytes
+HTML transferred:       0 bytes
+Requests per second:    39432.46 [#/sec] (mean)
+Time per request:       0.254 [ms] (mean)
+Time per request:       0.025 [ms] (mean, across all concurrent requests)
+Transfer rate:          2194.97 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0    0   0.0      0       1
+Processing:     0    0   0.0      0       1
+Waiting:        0    0   0.0      0       1
+Total:          0    0   0.0      0       1
+
+Percentage of the requests served within a certain time (ms)
+  50%      0
+  66%      0
+  75%      0
+  80%      0
+  90%      0
+  95%      0
+  98%      0
+  99%      0
+ 100%      1 (longest request)
+ ```
+ ---
+ ```
+midenok@lian:~$ ab -qn 100 -c 10 127.0.0.1:9000/test/slow
+This is ApacheBench, Version 2.3 <$Revision: 1638069 $>
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking 127.0.0.1 (be patient).....done
+
+
+Server Software:
+Server Hostname:        127.0.0.1
+Server Port:            9000
+
+Document Path:          /test/slow
+Document Length:        0 bytes
+
+Concurrency Level:      10
+Time taken for tests:   0.307 seconds
+Complete requests:      100
+Failed requests:        0
+Total transferred:      5700 bytes
+HTML transferred:       0 bytes
+Requests per second:    326.10 [#/sec] (mean)
+Time per request:       30.665 [ms] (mean)
+Time per request:       3.066 [ms] (mean, across all concurrent requests)
+Transfer rate:          18.15 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0    0   0.1      0       1
+Processing:    30   30   0.2     30      31
+Waiting:       30   30   0.2     30      31
+Total:         30   31   0.3     30      31
+ERROR: The median and mean for the total time are more than twice the standard
+       deviation apart. These results are NOT reliable.
+
+Percentage of the requests served within a certain time (ms)
+  50%     30
+  66%     31
+  75%     31
+  80%     31
+  90%     31
+  95%     31
+  98%     31
+  99%     31
+ 100%     31 (longest request)
+```
+Как видим, `Time taken for tests` в случае `FAST` запросов не сильно изменился. В случае `SLOW` запросов этот показатель уменьшился в 10 раз, как и ожидалось. Это связано с тем, что в случае `FAST` запросов основновное время занимают накладные расходы, а не логика самого запроса.
