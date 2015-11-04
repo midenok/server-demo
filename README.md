@@ -409,3 +409,29 @@ Percentage of the requests served within a certain time (ms)
   99%     31
  100%     46 (longest request)
 ```
+
+#### Опции запуска
+```
+midenok@lian:~/src/server-demo.git/build$ ./server-demo --help
+conn-daemon - Connect Daemon Example
+Usage:  server-demo [ -<flag> [<val>] | --<name>[{=| }<val>] ]...
+
+   -v, --verbose              Generate debug output to STDOUT
+   -p, --port=num             Listen port
+                                - it must be in the range:
+                                  greater than or equal to 1
+   -A, --accept-threads=num   Number of accept threads (defaults to number of CPU cores)
+                                - it must be in the range:
+                                  greater than or equal to 1
+   -C, --accept-capacity=num  Maximum number of simultaneous accepted connections per 1 accept thread
+(100 000)
+                                - it must be in the range:
+                                  greater than or equal to 1
+   -w, --worker-threads=num   Worker threads to spawn (defaults to number of accept threads)
+   -d, --slow-duration=num    Slow task delay in milliseconds (30)
+   -?, --help                 display extended usage information and exit
+   -!,  --- help           display extended usage information and exit
+
+Options are specified by doubled hyphens and their name or by a single
+hyphen and the flag character.
+```
