@@ -40,7 +40,7 @@ Content-Length: 0
 $ ./conn-daemon
 ```
 ```
-$ ab 127.0.0.1:9000/test/fast
+midenok@lian:~$ ab 127.0.0.1:9000/test/fast
 This is ApacheBench, Version 2.3 <$Revision: 1638069 $>
 Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
 Licensed to The Apache Software Foundation, http://www.apache.org/
@@ -72,7 +72,9 @@ Connect:        0    0   0.0      0       0
 Processing:     0    0   0.0      0       0
 Waiting:        0    0   0.0      0       0
 Total:          0    0   0.0      0       0
-
+```
+---
+```
 midenok@lian:~$ ab 127.0.0.1:9000/test/slow
 This is ApacheBench, Version 2.3 <$Revision: 1638069 $>
 Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
