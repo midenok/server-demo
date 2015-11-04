@@ -37,8 +37,9 @@ Content-Length: 0
 ##### Элементарное тестирование запросов
 Здесь и далее, если это не указано явно, опция `--slow-duration` установлена в 30 миллисекунд по умолчанию, опция `--port` установлена в 9000 по умолчанию.
 ```
-$ ./conn-daemon
+midenok@lian:~/src/server-demo/build$ ./server-demo
 ```
+---
 ```
 midenok@lian:~$ ab 127.0.0.1:9000/test/fast
 This is ApacheBench, Version 2.3 <$Revision: 1638069 $>
@@ -108,5 +109,6 @@ Processing:    30   30   0.0     30      30
 Waiting:       30   30   0.0     30      30
 Total:         30   30   0.0     30      30
 ```
+---
 
 
