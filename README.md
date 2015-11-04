@@ -34,7 +34,7 @@ Content-Length: 0
 #### Тестирование сервера
 Данная реализация сервера демонстрирует два вида GET-запросов: `/test/fast` и `/test/slow`. Первый из них сразу формирует ответ в accept-треде. Второй делегирует обработку в worker thread, где происходит задержка на сконфигурированный промежуток времени (опция `--slow-duration`). После чего accept thread формирует ответ.
 
-##### Элементарное тестирование запросов
+##### 1 запрос в 1 потоке
 Здесь и далее, если это не указано явно, опция `--slow-duration` установлена в 30 миллисекунд по умолчанию, опция `--port` установлена в 9000 по умолчанию.
 ```
 midenok@lian:~/src/server-demo/build$ ./server-demo
@@ -110,5 +110,102 @@ Waiting:       30   30   0.0     30      30
 Total:         30   30   0.0     30      30
 ```
 ---
+##### N запросов в 1 потоке
+Для наглядности используется число запросов, суммарно равное примерно 3-м секундам.
+---
+```
+midenok@lian:~$ ab -qn 100000 127.0.0.1:9000/test/fast
+This is ApacheBench, Version 2.3 <$Revision: 1638069 $>
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking 127.0.0.1 (be patient).....done
 
 
+Server Software:
+Server Hostname:        127.0.0.1
+Server Port:            9000
+
+Document Path:          /test/fast
+Document Length:        0 bytes
+
+Concurrency Level:      1
+Time taken for tests:   3.737 seconds
+Complete requests:      100000
+Failed requests:        0
+Total transferred:      5700000 bytes
+HTML transferred:       0 bytes
+Requests per second:    26758.43 [#/sec] (mean)
+Time per request:       0.037 [ms] (mean)
+Time per request:       0.037 [ms] (mean, across all concurrent requests)
+Transfer rate:          1489.48 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0    0   0.0      0       0
+Processing:     0    0   0.0      0       0
+Waiting:        0    0   0.0      0       0
+Total:          0    0   0.0      0       0
+
+Percentage of the requests served within a certain time (ms)
+  50%      0
+  66%      0
+  75%      0
+  80%      0
+  90%      0
+  95%      0
+  98%      0
+  99%      0
+ 100%      0 (longest request)
+
+```
+---
+```
+$ ab -qn 100 127.0.0.1:9000/test/slow
+This is ApacheBench, Version 2.3 <$Revision: 1638069 $>
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking 127.0.0.1 (be patient).....done
+
+
+Server Software:
+Server Hostname:        127.0.0.1
+Server Port:            9000
+
+Document Path:          /test/slow
+Document Length:        0 bytes
+
+Concurrency Level:      1
+Time taken for tests:   3.038 seconds
+Complete requests:      100
+Failed requests:        0
+Total transferred:      5700 bytes
+HTML transferred:       0 bytes
+Requests per second:    32.91 [#/sec] (mean)
+Time per request:       30.382 [ms] (mean)
+Time per request:       30.382 [ms] (mean, across all concurrent requests)
+Transfer rate:          1.83 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0    0   0.0      0       0
+Processing:    30   30   0.0     30      30
+Waiting:       30   30   0.0     30      30
+Total:         30   30   0.0     30      30
+
+Percentage of the requests served within a certain time (ms)
+  50%     30
+  66%     30
+  75%     30
+  80%     30
+  90%     30
+  95%     30
+  98%     30
+  99%     30
+ 100%     30 (longest request)
+```
+---
+##### N запросов в 10 потоках
+---
+---
