@@ -73,6 +73,38 @@ Processing:     0    0   0.0      0       0
 Waiting:        0    0   0.0      0       0
 Total:          0    0   0.0      0       0
 
+midenok@lian:~$ ab 127.0.0.1:9000/test/slow
+This is ApacheBench, Version 2.3 <$Revision: 1638069 $>
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking 127.0.0.1 (be patient).....done
+
+
+Server Software:
+Server Hostname:        127.0.0.1
+Server Port:            9000
+
+Document Path:          /test/slow
+Document Length:        0 bytes
+
+Concurrency Level:      1
+Time taken for tests:   0.030 seconds
+Complete requests:      1
+Failed requests:        0
+Total transferred:      57 bytes
+HTML transferred:       0 bytes
+Requests per second:    33.02 [#/sec] (mean)
+Time per request:       30.285 [ms] (mean)
+Time per request:       30.285 [ms] (mean, across all concurrent requests)
+Transfer rate:          1.84 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0    0   0.0      0       0
+Processing:    30   30   0.0     30      30
+Waiting:       30   30   0.0     30      30
+Total:         30   30   0.0     30      30
 ```
 
 
