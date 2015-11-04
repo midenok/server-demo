@@ -358,3 +358,55 @@ Percentage of the requests served within a certain time (ms)
  100%   3016 (longest request)
 ```
 В данном случае, мы создали узкое место 1 worker thread, через которое проходили все `SLOW` запросы. Также, мы создали высокую конкурентность в 100 accept thread для проверки бесперебойности доступа к очереди из нескольких потоков. Как видим, общее время составило 15 секунд, что равно 500 * 30 мс, т.к. все запросы прошли через 1 поток. Очередь отработала нормально: `Complete requests: 500`.
+
+##### Стресс-тест 1 час
+```
+midenok@lian:~/src/server-demo/build$ ./server-demo -C 1000 -w 300
+```
+---
+```
+midenok@lian:~$ ab -qt 3600 -n 100000000 -c 100 127.0.0.1:9000/test/slow
+
+This is ApacheBench, Version 2.3 <$Revision: 1638069 $>
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking 127.0.0.1 (be patient).....done
+
+
+Server Software:
+Server Hostname:        127.0.0.1
+Server Port:            9000
+
+Document Path:          /test/slow
+Document Length:        0 bytes
+
+Concurrency Level:      100
+Time taken for tests:   3600.007 seconds
+Complete requests:      11929397
+Failed requests:        0
+Total transferred:      679975629 bytes
+HTML transferred:       0 bytes
+Requests per second:    3313.72 [#/sec] (mean)
+Time per request:       30.178 [ms] (mean)
+Time per request:       0.302 [ms] (mean, across all concurrent requests)
+Transfer rate:          184.45 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0    0   0.0      0       3
+Processing:    30   30   0.1     30      46
+Waiting:       29   30   0.1     30      46
+Total:         30   30   0.1     30      46
+
+Percentage of the requests served within a certain time (ms)
+  50%     30
+  66%     30
+  75%     30
+  80%     30
+  90%     30
+  95%     30
+  98%     30
+  99%     31
+ 100%     46 (longest request)
+```
