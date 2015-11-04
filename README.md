@@ -366,7 +366,6 @@ midenok@lian:~/src/server-demo/build$ ./server-demo -C 1000 -w 300
 ---
 ```
 midenok@lian:~$ ab -qt 3600 -n 100000000 -c 100 127.0.0.1:9000/test/slow
-
 This is ApacheBench, Version 2.3 <$Revision: 1638069 $>
 Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
 Licensed to The Apache Software Foundation, http://www.apache.org/
