@@ -72,7 +72,6 @@ ThreadPool::release_thread(size_t managed_id)
         std::lock_guard<std::mutex> lock2(free_threads_mx_);
         free_threads.push_back(threads[managed_id].get());
     } else {
-        // FIXME: cond_signal() is sent before cond_wait()
         threads[managed_id]->assign_task(std::move(task_queue.front()));
         task_queue.pop_front();
     }
