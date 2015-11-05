@@ -31,22 +31,22 @@ class TaskHolder
        Yes, this is a dirty hack... */
     char data_[MAX_TASK_SIZE];
     size_t size_;
-    
+
 public:
     TaskHolder() : size_{0} {}
-    
+
     template <class T>
     TaskHolder (T &&y)
     {
         assign(y);
     }
-    
+
     template <class T>
     TaskHolder& operator= (T &&y)
     {
         assign(y);
     }
-    
+
     Task *
     operator->()
     {
@@ -56,7 +56,7 @@ public:
     {
         return (Task *) data_;
     }
-    
+
 private:
     template <class T>
     void assign (T &y)
@@ -78,24 +78,24 @@ private:
     std::thread thread_;
     std::mutex sleep_mx_;
     std::condition_variable sleep_;
-    
+
     bool continue_ = false;
     TaskHolder tasks_[2];
     TaskHolder* task_in_ = &tasks_[0];
     TaskHolder* task_out_ = &tasks_[1];
-    
+
     Thread(const Thread & copy) = delete;
-    
+
 public:
     void loop();
-    
+
     Thread(ThreadManager &manager, size_t managed_id);
     virtual ~Thread() {}
-    
+
     Thread* start();
-    
+
     std::thread* operator-> () { return &thread_; }
-    
+
     template <class AnyTask>
     AnyTask* assign_task(AnyTask &&task)
     {
@@ -104,13 +104,13 @@ public:
            Task creator by placement new will construct object already in thread space. */
         *task_in_ = std::move(task);
         continue_ = true;
-        
-        // notify() here is also guarded to prevent waiting thread 
+
+        // notify() here is also guarded to prevent waiting thread
         // missing notify on kernel preemption (see SO:15072479)
         sleep_.notify_one();
         return (AnyTask *)task_in_;
     }
-    
+
 };
 
 class ThreadPool : public ThreadManager
@@ -122,11 +122,11 @@ private:
     deque<TaskHolder> task_queue;
     std::mutex free_threads_mx_;
     std::mutex queue_mx_;
-    
+
     virtual void release_thread(size_t managed_id);
 public:
     void spawn_threads(int thread_count);
-    
+
     template <class AnyTask>
     AnyTask *
     add_task(AnyTask &task)

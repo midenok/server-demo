@@ -38,13 +38,13 @@ public:
         // Proceed to next phase
         PROCEED
     };
-    
+
     enum Service {
         NOT_DEFINED = 0,
         FAST,
         SLOW
     };
-    
+
 private:
     typedef Status(ReqParser::*parse_f)();
     parse_f parse;
@@ -53,7 +53,7 @@ private:
     size_t crlf_scan = 0;
     char *crlf_prev = nullptr; // detection of CRLFCRLF sequence
     bool method_ok = false;
-    
+
 public:
     size_t requestline_size = 0;
     size_t uri_start = 0;
@@ -73,7 +73,7 @@ public:
                 scan_size,
                 pattern.data(),
                 pattern.size());
-            
+
             if (found) {
                 scan_start = found - full_buf + pattern.size();
                 return found;
@@ -82,12 +82,12 @@ public:
         }
         return 0;
     }
-    
+
     bool compare(const std::string& s1, const char* s2, size_t s2_size)
     {
         return (s1.size() == s2_size && 0 == memcmp(s1.data(), s2, s2_size));
     }
-    
+
     bool match_uri()
     {
         assert(requestline_size && uri_start && uri_start <= requestline_size);
@@ -100,7 +100,7 @@ public:
         if (rest_size > 1)
             uri_end = (char *) memchr(&full_buf[uri_start + 1], ' ', rest_size - 1);
         uri_size = uri_end ? uri_end - &full_buf[uri_start] : rest_size;
-        
+
         if (compare(QUERY_FAST, &full_buf[uri_start], uri_size)) {
             service = FAST;
             return true;
@@ -111,7 +111,7 @@ public:
         }
         return false;
     }
-    
+
     Status
     find_crlf()
     {
@@ -136,7 +136,7 @@ public:
         }
         return CONTINUE;
     }
-    
+
     Status
     check_method()
     {
@@ -151,24 +151,24 @@ public:
             parse = &ReqParser::find_crlf;
             uri_start = GET.size();
         }
-        
+
         if (received_size < CRLF.size())
             return CONTINUE;
 
-        Status res = CONTINUE;        
+        Status res = CONTINUE;
         while (res == CONTINUE && crlf_scan <= received_size - CRLF.size())
             res = find_crlf();
-        
+
         return res;
     }
-    
+
     ReqParser(char *full_buf_, size_t &received_size_) :
         parse{&ReqParser::check_method},
         full_buf{full_buf_},
         received_size{received_size_}
     {
     }
-    
+
     Status
     operator()()
     {
@@ -180,7 +180,7 @@ class SlowTask : public Task
 {
     struct ev_loop *event_loop;
     ev_async *async_watcher;
-    
+
 public:
     SlowTask(struct ev_loop* l, ev_async *w) :
         event_loop{l},
@@ -212,7 +212,7 @@ class ConnectionCtx : public OnPool<ConnectionCtx>
     bool read_expected = true;
     ssize_t sent_size = 0;
     bool async_task = false;
-    
+
     void read_conn()
     {
         size_t recv_size = recv(conn_watcher.fd, recv_buf, buf_size - received_size, 0);
@@ -236,7 +236,7 @@ class ConnectionCtx : public OnPool<ConnectionCtx>
         received_size += recv_size;
         recv_buf += recv_size;
         assert (received_size <= buf_size);
-        
+
         ReqParser::Status s = parser();
         switch(s) {
             case ReqParser::TERMINATE:
@@ -265,7 +265,7 @@ class ConnectionCtx : public OnPool<ConnectionCtx>
             default:
                 break;
         }
-  
+
         if (received_size >= buf_size) {
             // TODO: mmap-based ring buffer (see https://github.com/willemt/cbuffer)
             error("Not enough buffer!");
@@ -273,7 +273,7 @@ class ConnectionCtx : public OnPool<ConnectionCtx>
             return;
         }
     }
-    
+
     void terminate()
     {
         if (conn_watcher.fd) {
@@ -313,7 +313,7 @@ class ConnectionCtx : public OnPool<ConnectionCtx>
             delete this;
         return;
     }
-    
+
     void write_conn()
     {
         ssize_t send_sz = send(conn_watcher.fd, RESPONSE.data() + sent_size, RESPONSE.size() - sent_size, 0);
@@ -324,7 +324,7 @@ class ConnectionCtx : public OnPool<ConnectionCtx>
             return;
         }
     }
-    
+
     static void
     conn_callback (EV_P_ ev_io *w, int revents)
     {
@@ -400,7 +400,7 @@ class AcceptTask : public Task
     struct ev_loop *event_loop;
     ev_io accept_watcher;
     unique_ptr<Pool<ConnectionCtx> > pool;
-    
+
     void
     accept_conn()
     {
@@ -432,7 +432,7 @@ public:
     {
         decltype(pool)::element_type::memsize(capacity);
     }
-    
+
     AcceptTask(size_t conn_capacity) :
         pool(new Pool<ConnectionCtx>(conn_capacity))
     {
@@ -525,15 +525,15 @@ main(int argc, char ** argv)
 
     if (!HAVE_OPT(ACCEPT_THREADS))
         OPT_VALUE_ACCEPT_THREADS = std::thread::hardware_concurrency();
-    
+
     if (!HAVE_OPT(WORKER_THREADS))
         OPT_VALUE_WORKER_THREADS = OPT_VALUE_ACCEPT_THREADS;
 
     // main thread is also accept thread, thus decreasing spawning
     int accept_pool_sz = OPT_VALUE_ACCEPT_THREADS - 1;
-        
+
     thread_pool.spawn_threads(accept_pool_sz + OPT_VALUE_WORKER_THREADS);
-    
+
     cdebug("main", "Running ", OPT_VALUE_ACCEPT_THREADS, " "
            "accept threads; pool size: ", AcceptTask::pool_size(OPT_VALUE_ACCEPT_CAPACITY) / 1024, " kb; "
            "total pool size: ", AcceptTask::pool_size(OPT_VALUE_ACCEPT_CAPACITY) * OPT_VALUE_ACCEPT_THREADS / 1024, " kb.");

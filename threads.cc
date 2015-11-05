@@ -12,7 +12,7 @@ TaskHolder::assign (TaskHolder &&h)
         memcpy(data_, h.data_, h.size_);
         h.size_ = 0;
     }
-    
+
 }
 
 Thread::Thread(ThreadManager &manager, size_t managed_id) :

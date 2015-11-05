@@ -19,7 +19,7 @@ public:
 private:
     vector<Chunk> pool;
     vector<size_t> freelist;
-    
+
 public:
     Pool(size_t capacity)
     {
@@ -28,13 +28,13 @@ public:
         for (size_t id = 0; id < capacity; ++id)
             freelist.push_back(id);
     }
-    
+
     static size_t
     memsize(size_t capacity = 1)
     {
         return (sizeof(Chunk) + sizeof(size_t)) * capacity;
     }
-    
+
     Chunk*
     get(size_t &id) throw (std::bad_alloc)
     {
@@ -45,7 +45,7 @@ public:
         freelist.pop_back();
         return &pool[id];
     }
-    
+
     void
     release(size_t id)
     {
@@ -65,20 +65,20 @@ class OnPool
 {
     static thread_local size_t id_;
     static thread_local Pool<Object> *pool_;
-    
+
     size_t id;
     Pool<Object> &pool;
-    
+
 public:
     OnPool() :
         id{id_},
         pool{*pool_} {}
-      
+
     virtual ~OnPool()
     {
         pool.release(id);
     }
-    
+
     void * operator new(size_t count, Pool<Object> &pool) throw(std::bad_alloc)
     {
         pool_ = &pool;
