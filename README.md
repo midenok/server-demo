@@ -413,11 +413,12 @@ Percentage of the requests served within a certain time (ms)
 
 #### Опции запуска
 ```
-midenok@lian:~/src/server-demo.git/build$ ./server-demo --help
-conn-daemon - Connect Daemon Example
+midenok@lian:~/src/server-demo/build$ ./server-demo --help
+server-demo - Server Example
 Usage:  server-demo [ -<flag> [<val>] | --<name>[{=| }<val>] ]...
 
    -v, --verbose              Generate debug output to STDOUT
+   -d, --daemonize            Detach from terminal and run in background
    -p, --port=num             Listen port
                                 - it must be in the range:
                                   greater than or equal to 1
@@ -429,7 +430,7 @@ Usage:  server-demo [ -<flag> [<val>] | --<name>[{=| }<val>] ]...
                                 - it must be in the range:
                                   greater than or equal to 1
    -w, --worker-threads=num   Worker threads to spawn (defaults to number of accept threads)
-   -d, --slow-duration=num    Slow task delay in milliseconds (30)
+   -D, --slow-duration=num    Slow task delay in milliseconds (30)
    -?, --help                 display extended usage information and exit
    -!,  --- help           display extended usage information and exit
 
