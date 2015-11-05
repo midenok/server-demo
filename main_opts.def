@@ -1,14 +1,21 @@
 AutoGen Definitions options;
-prog-name     = conn-daemon;
-prog-title    = "Connect Daemon Example";
+prog-name     = server-demo;
+prog-title    = "Server Example";
 long-opts;
 gnu-usage;    /* GNU style preferred to default */
 
 flag = {
     name      = verbose;
     value     = v;        /* flag style option character */
-    max       = 1;  /* occurrence limit (none)     */
+    max       = 1;        /* occurrence limit (none)     */
     descrip   = "Generate debug output to STDOUT";
+};
+
+flag = {
+    name      = daemonize;
+    value     = d;        /* flag style option character */
+    max       = 1;        /* occurrence limit (none)     */
+    descrip   = "Detach from terminal and run in background";
 };
 
 flag = {
@@ -52,7 +59,7 @@ flag = {
 
 flag = {
     name      = slow-duration;
-    value     = d;        /* flag style option character */
+    value     = D;        /* flag style option character */
     arg-type  = number;   /* option argument indication  */
     arg-default = 30;
     max       = 1;  /* occurrence limit (none)     */

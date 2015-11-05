@@ -146,7 +146,12 @@ public:
             return static_cast<AnyTask *>(&(*task_queue.back()));
         }
     }
-    void join();
+    virtual ~ThreadPool()
+    {
+        for (auto &thread: threads) {
+            (*thread)->detach();
+        }
+    }
 };
 
 #endif //__cd_threads_h

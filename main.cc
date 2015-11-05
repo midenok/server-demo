@@ -499,10 +499,24 @@ public:
     }
 };
 
+void
+daemonize()
+{
+    static const int nochdir = 1;
+    static const int noclose = ENABLED_OPT(VERBOSE);
+    static const char *dir = "/var/tmp";
+
+    if (chdir(dir))
+        throw Errno("chdir ", dir);
+
+    if (daemon(nochdir, noclose))
+        throw Errno("daemon");
+}
+
 int
 main(int argc, char ** argv)
 {
-    int res = optionProcess(&conn_daemonOptions, argc, argv);
+    int res = optionProcess(&server_demoOptions, argc, argv);
     res = ferror(stdout);
     if (res != 0) {
         cerror("optionProcess", "output error writing to stdout!");
@@ -531,6 +545,9 @@ main(int argc, char ** argv)
             thread_pool.add_task(accept_task);
         }
 
+        if (ENABLED_OPT(DAEMONIZE))
+            daemonize();
+
         AcceptTask accept_task(OPT_VALUE_ACCEPT_CAPACITY);
         accept_task.execute();
     } catch(std::bad_alloc &) {
@@ -540,6 +557,6 @@ main(int argc, char ** argv)
         std::cerr << ex.what() << "\n";
         return 100;
     }
-    thread_pool.join();
+
     return res;
 }

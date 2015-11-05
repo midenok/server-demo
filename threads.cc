@@ -77,11 +77,3 @@ ThreadPool::release_thread(size_t managed_id)
         task_queue.pop_front();
     }
 }
-
-void
-ThreadPool::join()
-{
-    for (auto &thread: threads) {
-        (*thread)->join();
-    }
-}
