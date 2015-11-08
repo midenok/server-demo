@@ -532,6 +532,9 @@ main(int argc, char ** argv)
     // main thread is also accept thread, thus decreasing spawning
     int accept_pool_sz = OPT_VALUE_ACCEPT_THREADS - 1;
 
+    if (ENABLED_OPT(DAEMONIZE))
+        daemonize();
+
     thread_pool.spawn_threads(accept_pool_sz + OPT_VALUE_WORKER_THREADS);
 
     cdebug("main", "Running ", OPT_VALUE_ACCEPT_THREADS, " "
@@ -544,9 +547,6 @@ main(int argc, char ** argv)
             AcceptTask accept_task(OPT_VALUE_ACCEPT_CAPACITY);
             thread_pool.add_task(accept_task);
         }
-
-        if (ENABLED_OPT(DAEMONIZE))
-            daemonize();
 
         AcceptTask accept_task(OPT_VALUE_ACCEPT_CAPACITY);
         accept_task.execute();
