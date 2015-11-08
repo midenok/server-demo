@@ -366,7 +366,7 @@ midenok@lian:~/src/server-demo/build$ ./server-demo -C 1000 -w 300
 ---
 ```
 midenok@lian:~$ ab -qt 3600 -n 100000000 -c 100 127.0.0.1:9000/test/slow
-This is ApacheBench, Version 2.3 <$Revision: 1638069 $>
+This is ApacheBench, Version 2.3 <$Revision: 1703952 $>
 Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
 Licensed to The Apache Software Foundation, http://www.apache.org/
 
@@ -381,22 +381,22 @@ Document Path:          /test/slow
 Document Length:        0 bytes
 
 Concurrency Level:      100
-Time taken for tests:   3600.007 seconds
-Complete requests:      11929397
+Time taken for tests:   3600.000 seconds
+Complete requests:      11926799
 Failed requests:        0
-Total transferred:      679975629 bytes
+Total transferred:      679827657 bytes
 HTML transferred:       0 bytes
-Requests per second:    3313.72 [#/sec] (mean)
-Time per request:       30.178 [ms] (mean)
+Requests per second:    3313.00 [#/sec] (mean)
+Time per request:       30.184 [ms] (mean)
 Time per request:       0.302 [ms] (mean, across all concurrent requests)
-Transfer rate:          184.45 [Kbytes/sec] received
+Transfer rate:          184.42 [Kbytes/sec] received
 
 Connection Times (ms)
               min  mean[+/-sd] median   max
-Connect:        0    0   0.0      0       3
-Processing:    30   30   0.1     30      46
-Waiting:       29   30   0.1     30      46
-Total:         30   30   0.1     30      46
+Connect:        0    0   0.1      0       5
+Processing:    30   30   0.1     30      47
+Waiting:       27   30   0.1     30      46
+Total:         30   30   0.1     30      49
 
 Percentage of the requests served within a certain time (ms)
   50%     30
@@ -405,11 +405,57 @@ Percentage of the requests served within a certain time (ms)
   80%     30
   90%     30
   95%     30
-  98%     30
+  98%     31
   99%     31
- 100%     46 (longest request)
+ 100%     49 (longest request)
 ```
-Этот тест запускался параллельно в паре с `ab -qt 3600 -n 100000000 -c 100 127.0.0.1:9000/test/fast`, но ApacheBench "накрылся медным тазом" через полчаса работы (Segmentation fault). Программа сервера продолжала работать и отработала оставшийся в одиночестве slow-тест до конца. Как видно из статистики отклонений времени, полчаса стресс-нагрузки `FAST` никак не повлияли на работу `SLOW`.
+Параллельно с:
+```
+midenok@lian:~$ ab -qt 3600 -n 100000000 -c 100 127.0.0.1:9000/test/fast
+This is ApacheBench, Version 2.3 <$Revision: 1703952 $>
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking 127.0.0.1 (be patient).....done
+
+
+Server Software:
+Server Hostname:        127.0.0.1
+Server Port:            9000
+
+Document Path:          /test/fast
+Document Length:        0 bytes
+
+Concurrency Level:      100
+Time taken for tests:   2488.526 seconds
+Complete requests:      100000000
+Failed requests:        0
+Total transferred:      5700000000 bytes
+HTML transferred:       0 bytes
+Requests per second:    40184.43 [#/sec] (mean)
+Time per request:       2.489 [ms] (mean)
+Time per request:       0.025 [ms] (mean, across all concurrent requests)
+Transfer rate:          2236.83 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0    1   0.2      1       5
+Processing:     0    1   0.2      1      18
+Waiting:        0    1   0.2      1      15
+Total:          1    2   0.2      2      22
+
+Percentage of the requests served within a certain time (ms)
+  50%      2
+  66%      2
+  75%      2
+  80%      2
+  90%      3
+  95%      3
+  98%      3
+  99%      3
+ 100%     22 (longest request)
+```
+Как видно из статистики, стресс-нагрузка `FAST` никак не повлияла на работу `SLOW`.
 
 #### Опции запуска
 ```
