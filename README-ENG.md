@@ -8,4 +8,7 @@ Each accept thread runs the event loop (provided by [libev](http://software.schm
 
 If some business-logic task requires the execution of heavy-weight algorithm (and splitting to short time periods seems to be difficult), such task can be delegated to dedicated thread (worker thread). Also, it is possible to delegate there the connection socket itself, removing it from the event loop of accept thread first and handling synchronously in worker thread afterwards. And even more, it is possible to organise for it a dedicated event loop and handle it asynchronously in worker thread. As you can see, the possibilities are quite rich!
 
+#### Working with memory
+The main requirement for memory usage design is avoid dynamic allocations on connections handling. Memory can be preallocated at server initialization time by the parameter of maximum connection count per 1 accept thread (`--accept-capacity` option).
 
+Server implementation demonstrates simple memory pool (`Pool` class). Each accept thread have its own memory pool, so there is no need to protect it from multiple threads. After new connection is established accept thread creates new `ConnectionCtx` from thread's memory pool. Life span of `ConnectionCtx` is equal to the time of established connection: when the connection is closed (no matter by what side), `ConnectionCtx` gets destroyed and memory block returns to its pool.
