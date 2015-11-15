@@ -18,3 +18,17 @@ If the task is delegated to a dedicated worker thread, then that thread owns the
 In case task delegated to a worker thread, the life span `ConnectionCtx` is increased to the life span of a task, because the task uses `ConnectionCtx` resources. Wherein `ConnectionCtx` can disconnect peer at any time as long as the resources used by the task will still be available.
 
 #### Server working scheme
+At start a thread pool is created with amount of configured accept and worker threads minus 1 (the main thread is also plays the role of accept thread). All accept threads start to execute `AcceptTask`. `AcceptTask` registers a callback on listen socket read (`accept_conn()`) in event loop and runs that event loop. When a new connection comes new `ConnectionCtx` is created, which registers connection socket in `AcceptTask` event loop. When new data arrives, `ConnectionCtx` processes request with `ReqParser` (`ConnectionCtx` takes also request role, so it can't handle multiple requests). `ReqParser` detects two kinds of queries: `FAST` and `SLOW`. In case of incorrect request `ConnectionCtx` finishes the connection as soon as possible. Example of correct request:
+```
+GET /test/fast<CR><LF>
+<CR><LF>
+```
+In case of `FAST` query, `ConnectionCtx` sends this response and finishes the connection:
+```
+HTTP/1.1 200 OK
+Connection: close
+Content-Length: 0
+```
+In case of `SLOW` query, if the amount of worker threads is zero, `ConnectionCtx` does the same as in case of `FAST`. If the amount of worker threads is not zero, the task `SlowTask` is passed to a free worker thread. Inside worker thread `SlowTask` waits some configured amount of time and notifies `ConnectionCtx` about its end. When `ConnectionCtx` sees `SlowTask` end, it generates the above response and finishes the connection.
+
+If all worker threads are busy when the new task arrives, then this task is added to a wait queue. When some thread finishes its task, it takes a task from wait queue head (so the queue is a FIFO stack).
