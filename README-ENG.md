@@ -304,5 +304,184 @@ Percentage of the requests served within a certain time (ms)
   99%     31
  100%     31 (longest request)
 ```
-As we see `Time taken for tests` in case of `FAST` queries was not much changed (2.536 compared to 3.545). This is because the `FAST` query logic is empty and overheads do take the most of time (which is the same in both tests). In case of `SLOW` query this indicator is decreased by 10 times thanks to threads, so the threading works fine.
+As we can see, `Time taken for tests` in case of `FAST` queries was not much changed (2.536 compared to 3.545). This is because the `FAST` query logic is empty and overheads do take the most of time (which is the same in both tests). In case of `SLOW` query this indicator is decreased by 10 times thanks to threads, so the threading works fine.
+
+##### Load on `task_queue`
+Thread pool have a task queue. If all threads are busy the task is placed into queue. Let's check how well it works...
+```
+midenok@lian:~/src/server-demo/build$ ./server-demo -C 1000 -A 100 -w 1
+```
+---
+```
+midenok@lian:~$ ab -qn 500 -c 100 127.0.0.1:9000/test/slow
+This is ApacheBench, Version 2.3 <$Revision: 1638069 $>
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking 127.0.0.1 (be patient).....done
+
+
+Server Software:
+Server Hostname:        127.0.0.1
+Server Port:            9000
+
+Document Path:          /test/slow
+Document Length:        0 bytes
+
+Concurrency Level:      100
+Time taken for tests:   15.053 seconds
+Complete requests:      500
+Failed requests:        0
+Total transferred:      28500 bytes
+HTML transferred:       0 bytes
+Requests per second:    33.22 [#/sec] (mean)
+Time per request:       3010.562 [ms] (mean)
+Time per request:       30.106 [ms] (mean, across all concurrent requests)
+Transfer rate:          1.85 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0    1   1.0      0       4
+Processing:    37 2712 709.5   3008    3015
+Waiting:       37 2712 709.5   3008    3015
+Total:         39 2712 708.7   3008    3016
+
+Percentage of the requests served within a certain time (ms)
+  50%   3008
+  66%   3008
+  75%   3008
+  80%   3008
+  90%   3008
+  95%   3009
+  98%   3009
+  99%   3009
+ 100%   3016 (longest request)
+```
+In this case we created a bottleneck of 1 worker thread, what passed all 'SLOW' queries over. Also we created hich concurrency of 100 accept threads, what tested the stability of queue access from multiple threads. As we can see, the total time is 15 seconds which equals to 500 * 30 ms, because all queries was serialized by 1 thread. The queue have done well: `Complete requests: 500`.
+
+##### Stress-test 1 hour
+```
+midenok@lian:~/src/server-demo/build$ ./server-demo -C 1000 -w 300
+```
+---
+```
+midenok@lian:~$ ab -qt 3600 -n 100000000 -c 100 127.0.0.1:9000/test/slow
+This is ApacheBench, Version 2.3 <$Revision: 1703952 $>
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking 127.0.0.1 (be patient).....done
+
+
+Server Software:
+Server Hostname:        127.0.0.1
+Server Port:            9000
+
+Document Path:          /test/slow
+Document Length:        0 bytes
+
+Concurrency Level:      100
+Time taken for tests:   3600.000 seconds
+Complete requests:      11926799
+Failed requests:        0
+Total transferred:      679827657 bytes
+HTML transferred:       0 bytes
+Requests per second:    3313.00 [#/sec] (mean)
+Time per request:       30.184 [ms] (mean)
+Time per request:       0.302 [ms] (mean, across all concurrent requests)
+Transfer rate:          184.42 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0    0   0.1      0       5
+Processing:    30   30   0.1     30      47
+Waiting:       27   30   0.1     30      46
+Total:         30   30   0.1     30      49
+
+Percentage of the requests served within a certain time (ms)
+  50%     30
+  66%     30
+  75%     30
+  80%     30
+  90%     30
+  95%     30
+  98%     31
+  99%     31
+ 100%     49 (longest request)
+```
+The above runs in parallel with:
+```
+midenok@lian:~$ ab -qt 3600 -n 100000000 -c 100 127.0.0.1:9000/test/fast
+This is ApacheBench, Version 2.3 <$Revision: 1703952 $>
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking 127.0.0.1 (be patient).....done
+
+
+Server Software:
+Server Hostname:        127.0.0.1
+Server Port:            9000
+
+Document Path:          /test/fast
+Document Length:        0 bytes
+
+Concurrency Level:      100
+Time taken for tests:   2488.526 seconds
+Complete requests:      100000000
+Failed requests:        0
+Total transferred:      5700000000 bytes
+HTML transferred:       0 bytes
+Requests per second:    40184.43 [#/sec] (mean)
+Time per request:       2.489 [ms] (mean)
+Time per request:       0.025 [ms] (mean, across all concurrent requests)
+Transfer rate:          2236.83 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0    1   0.2      1       5
+Processing:     0    1   0.2      1      18
+Waiting:        0    1   0.2      1      15
+Total:          1    2   0.2      2      22
+
+Percentage of the requests served within a certain time (ms)
+  50%      2
+  66%      2
+  75%      2
+  80%      2
+  90%      3
+  95%      3
+  98%      3
+  99%      3
+ 100%     22 (longest request)
+```
+As shown by stats, stress load of `FAST` had not influence the `SLOW`.
+
+#### Execute options
+```
+midenok@lian:~/src/server-demo/build$ ./server-demo --help
+server-demo - Server Example
+Usage:  server-demo [ -<flag> [<val>] | --<name>[{=| }<val>] ]...
+
+   -v, --verbose              Generate debug output to STDOUT
+   -d, --daemonize            Detach from terminal and run in background
+   -p, --port=num             Listen port
+                                - it must be in the range:
+                                  greater than or equal to 1
+   -A, --accept-threads=num   Number of accept threads (defaults to number of CPU cores)
+                                - it must be in the range:
+                                  greater than or equal to 1
+   -C, --accept-capacity=num  Maximum number of simultaneous accepted connections per 1 accept thread
+(100 000)
+                                - it must be in the range:
+                                  greater than or equal to 1
+   -w, --worker-threads=num   Worker threads to spawn (defaults to number of accept threads)
+   -D, --slow-duration=num    Slow task delay in milliseconds (30)
+   -?, --help                 display extended usage information and exit
+   -!,  --- help           display extended usage information and exit
+
+Options are specified by doubled hyphens and their name or by a single
+hyphen and the flag character.
+```
+
 
