@@ -32,3 +32,275 @@ Content-Length: 0
 In case of `SLOW` query, if the amount of worker threads is zero, `ConnectionCtx` does the same as in case of `FAST`. If the amount of worker threads is not zero, the task `SlowTask` is passed to a free worker thread. Inside worker thread `SlowTask` waits some configured amount of time and notifies `ConnectionCtx` about its end. When `ConnectionCtx` sees `SlowTask` end, it generates the above response and finishes the connection.
 
 If all worker threads are busy when the new task arrives, then this task is added to a wait queue. When some thread finishes its task, it takes a task from wait queue head (so the queue is a FIFO stack).
+
+#### Testing
+Current implementation supports two kinds of GET-requests: `/test/fast` and `/test/slow`. The former one does instant reply in accept thread. The latter one delegates processing to a worker thread, where it does delay for a configured amount of time (`--slow-duration` option). After that accept thread generates reply.
+
+In the tests below `--slow-duration` is set to a default of 30 milliseconds, `--port` is set to a default of 9000.
+
+##### 1 request in 1 thread
+```
+midenok@lian:~/src/server-demo/build$ ./server-demo -A 1
+```
+---
+```
+midenok@lian:~$ ab 127.0.0.1:9000/test/fast
+This is ApacheBench, Version 2.3 <$Revision: 1638069 $>
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking 127.0.0.1 (be patient).....done
+
+
+Server Software:
+Server Hostname:        127.0.0.1
+Server Port:            9000
+
+Document Path:          /test/fast
+Document Length:        0 bytes
+
+Concurrency Level:      1
+Time taken for tests:   0.000 seconds
+Complete requests:      1
+Failed requests:        0
+Total transferred:      57 bytes
+HTML transferred:       0 bytes
+Requests per second:    4000.00 [#/sec] (mean)
+Time per request:       0.250 [ms] (mean)
+Time per request:       0.250 [ms] (mean, across all concurrent requests)
+Transfer rate:          222.66 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0    0   0.0      0       0
+Processing:     0    0   0.0      0       0
+Waiting:        0    0   0.0      0       0
+Total:          0    0   0.0      0       0
+```
+---
+```
+midenok@lian:~$ ab 127.0.0.1:9000/test/slow
+This is ApacheBench, Version 2.3 <$Revision: 1638069 $>
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking 127.0.0.1 (be patient).....done
+
+
+Server Software:
+Server Hostname:        127.0.0.1
+Server Port:            9000
+
+Document Path:          /test/slow
+Document Length:        0 bytes
+
+Concurrency Level:      1
+Time taken for tests:   0.030 seconds
+Complete requests:      1
+Failed requests:        0
+Total transferred:      57 bytes
+HTML transferred:       0 bytes
+Requests per second:    32.91 [#/sec] (mean)
+Time per request:       30.389 [ms] (mean)
+Time per request:       30.389 [ms] (mean, across all concurrent requests)
+Transfer rate:          1.83 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0    0   0.0      0       0
+Processing:    30   30   0.0     30      30
+Waiting:       30   30   0.0     30      30
+Total:         30   30   0.0     30      30
+```
+
+##### N requests in 1 thread
+For convenience the amount of queries is taken to be around 3 seconds in total. 
+```
+midenok@lian:~$ ab -qn 100000 127.0.0.1:9000/test/fast
+This is ApacheBench, Version 2.3 <$Revision: 1638069 $>
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking 127.0.0.1 (be patient).....done
+
+
+Server Software:
+Server Hostname:        127.0.0.1
+Server Port:            9000
+
+Document Path:          /test/fast
+Document Length:        0 bytes
+
+Concurrency Level:      1
+Time taken for tests:   3.545 seconds
+Complete requests:      100000
+Failed requests:        0
+Total transferred:      5700000 bytes
+HTML transferred:       0 bytes
+Requests per second:    28211.74 [#/sec] (mean)
+Time per request:       0.035 [ms] (mean)
+Time per request:       0.035 [ms] (mean, across all concurrent requests)
+Transfer rate:          1570.38 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0    0   0.0      0       0
+Processing:     0    0   0.0      0       0
+Waiting:        0    0   0.0      0       0
+Total:          0    0   0.0      0       0
+
+Percentage of the requests served within a certain time (ms)
+  50%      0
+  66%      0
+  75%      0
+  80%      0
+  90%      0
+  95%      0
+  98%      0
+  99%      0
+ 100%      0 (longest request)
+```
+---
+```
+midenok@lian:~$ ab -qn 100 127.0.0.1:9000/test/slow
+This is ApacheBench, Version 2.3 <$Revision: 1638069 $>
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking 127.0.0.1 (be patient).....done
+
+
+Server Software:
+Server Hostname:        127.0.0.1
+Server Port:            9000
+
+Document Path:          /test/slow
+Document Length:        0 bytes
+
+Concurrency Level:      1
+Time taken for tests:   3.035 seconds
+Complete requests:      100
+Failed requests:        0
+Total transferred:      5700 bytes
+HTML transferred:       0 bytes
+Requests per second:    32.95 [#/sec] (mean)
+Time per request:       30.352 [ms] (mean)
+Time per request:       30.352 [ms] (mean, across all concurrent requests)
+Transfer rate:          1.83 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0    0   0.0      0       0
+Processing:    30   30   0.0     30      30
+Waiting:       30   30   0.0     30      30
+Total:         30   30   0.0     30      30
+
+Percentage of the requests served within a certain time (ms)
+  50%     30
+  66%     30
+  75%     30
+  80%     30
+  90%     30
+  95%     30
+  98%     30
+  99%     30
+ 100%     30 (longest request)
+ ```
+##### N requests in 10 threads
+```
+midenok@lian:~/src/server-demo/build$ ./server-demo -A 10
+```
+---
+```
+midenok@lian:~$ ab -qn 100000 -c 10 127.0.0.1:9000/test/fast
+This is ApacheBench, Version 2.3 <$Revision: 1638069 $>
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking 127.0.0.1 (be patient).....done
+
+
+Server Software:
+Server Hostname:        127.0.0.1
+Server Port:            9000
+
+Document Path:          /test/fast
+Document Length:        0 bytes
+
+Concurrency Level:      10
+Time taken for tests:   2.536 seconds
+Complete requests:      100000
+Failed requests:        0
+Total transferred:      5700000 bytes
+HTML transferred:       0 bytes
+Requests per second:    39432.46 [#/sec] (mean)
+Time per request:       0.254 [ms] (mean)
+Time per request:       0.025 [ms] (mean, across all concurrent requests)
+Transfer rate:          2194.97 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0    0   0.0      0       1
+Processing:     0    0   0.0      0       1
+Waiting:        0    0   0.0      0       1
+Total:          0    0   0.0      0       1
+
+Percentage of the requests served within a certain time (ms)
+  50%      0
+  66%      0
+  75%      0
+  80%      0
+  90%      0
+  95%      0
+  98%      0
+  99%      0
+ 100%      1 (longest request)
+ ```
+ ---
+ ```
+midenok@lian:~$ ab -qn 100 -c 10 127.0.0.1:9000/test/slow
+This is ApacheBench, Version 2.3 <$Revision: 1638069 $>
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking 127.0.0.1 (be patient).....done
+
+
+Server Software:
+Server Hostname:        127.0.0.1
+Server Port:            9000
+
+Document Path:          /test/slow
+Document Length:        0 bytes
+
+Concurrency Level:      10
+Time taken for tests:   0.307 seconds
+Complete requests:      100
+Failed requests:        0
+Total transferred:      5700 bytes
+HTML transferred:       0 bytes
+Requests per second:    326.10 [#/sec] (mean)
+Time per request:       30.665 [ms] (mean)
+Time per request:       3.066 [ms] (mean, across all concurrent requests)
+Transfer rate:          18.15 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0    0   0.1      0       1
+Processing:    30   30   0.2     30      31
+Waiting:       30   30   0.2     30      31
+Total:         30   31   0.3     30      31
+ERROR: The median and mean for the total time are more than twice the standard
+       deviation apart. These results are NOT reliable.
+
+Percentage of the requests served within a certain time (ms)
+  50%     30
+  66%     31
+  75%     31
+  80%     31
+  90%     31
+  95%     31
+  98%     31
+  99%     31
+ 100%     31 (longest request)
+```
