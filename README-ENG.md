@@ -304,3 +304,5 @@ Percentage of the requests served within a certain time (ms)
   99%     31
  100%     31 (longest request)
 ```
+As we see `Time taken for tests` in case of `FAST` queries was not much changed (2.536 compared to 3.545). This is because the `FAST` query logic is empty and overheads do take the most of time (which is the same in both tests). In case of `SLOW` query this indicator is decreased by 10 times thanks to threads, so the threading works fine.
+
