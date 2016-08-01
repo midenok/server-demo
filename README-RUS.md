@@ -1,44 +1,44 @@
 ## server-demo: event-driven multi-threaded connection server
-Example of mixed asynchronous-synchronous "event loop + worker threads" server model. Such model allows to utilize strengths of both methods: high productivity of accepting connections in event loop and guaranteed concurrency and algorithm simplicity in worker threads.
+Пример реализации сервера смешанной асинхронно-синхронной модели "event loop + worker threads". Такая модель позволяет задействовать преимущества обоих подходов: высокая производительность приёма коннектов в event loop; и гарантированная конкурентность и простота алгоритма в worker thread.
 
-#### Design and working principle
-There are some configured amount of accept threads (option `--accept-threads`) which by default is set to formal amount of CPU cores (see [std::thread::hardware_concurrency](http://en.cppreference.com/w/cpp/thread/thread/hardware_concurrency)). Each accept thread accepts incoming connections on separate listening socket. However, all listening sockets are bound to the same TCP/IP address (via `SO_REUSEPORT` flag). Thus, the incoming connections are distributed equally by system kernel to all existing server's accept threads.
+#### Устройство и принцип работы
+Имеется некоторое сконфигурированное количество accept threads (опция `--accept-threads`), которое по умолчанию устанавливается в условное число ядер процессора (см. [std::thread::hardware_concurrency](http://en.cppreference.com/w/cpp/thread/thread/hardware_concurrency)). Каждый accept thread принимает входящие соединения на отдельном слушающем сокете. Однако, все слушающие сокеты привязаны к одному и тому же TCP/IP адресу (благодаря флагу `SO_REUSEPORT`). Таким образом, входящие соединения равномерно распределяются ядром системы по имеющимся accept-тредам сервера.
 
-Each accept thread runs the event loop (provided by [libev](http://software.schmorp.de/pkg/libev.html) library). All file descriptors handled by event loop are asynchronous (i.e. non-blocking), including of course the listening sockets. After the connection comes to listen socket, the new connection socket is created. Connection socket is also added into the event loop and handled asynchronously in accept thread.
+Каждый accept thread исполняет внутри себя event loop (реализованный библиотекой [libev](http://software.schmorp.de/pkg/libev.html)). Все файл-дескрипторы обрабатываемые в event loop асинхронные (т.е. неблокирующиеся), включая конечно и слушающие сокеты (далее listen socket). После того, как соединение приходит в listen socket, формируется connection socket. Connection socket также добавляется в event loop и обрабатывается асинхронно в accept thread.
 
-If some business-logic task requires the execution of heavy-weight algorithm (and splitting to short time periods seems to be difficult), such task can be delegated to dedicated thread (worker thread). Also, it is possible to delegate there the connection socket itself, removing it from the event loop of accept thread first and handling synchronously in worker thread afterwards. And even more, it is possible to organise for it a dedicated event loop and handle it asynchronously in worker thread. As you can see, the possibilities are quite rich!
+Если же некоторая задача бизнес-логики требует исполнения продолжительного алгоритма (а квантование на короткие промежутки времени представляется слишком сложным), такую задачу можно делегировать выделенному треду (worker thread). Также возможно делегировать туда и сам connection socket, убрав при этом его из event loop accept-треда, и обрабатывать в дальнейшем синхронно в worker thread. И даже, возможно организовать для него свой выделенный event loop и обрабатывать асинхронно в worker thread. Как видите, возможности весьма разнообразные! 
 
-#### Working with memory
-The main requirement for memory usage design is avoid dynamic allocations on connections handling. Memory can be preallocated at server initialization time by the parameter of maximum connection count per 1 accept thread (`--accept-capacity` option).
+##### Как устроена работа с памятью
+Основное требование к серверу -- во время приёма и обработки соединений не производить динамической аллокации памяти. Память может быть преаллоцирована во время инициализации сервера, исходя из расчёта максимального количества одновременных соединений на один accept thread (опция `--accept-capacity`).
 
-Server implementation demonstrates simple memory pool (`Pool` class). Each accept thread have its own memory pool, so there is no need to protect it from multiple threads. After new connection is established accept thread creates new `ConnectionCtx` from thread's memory pool. Life span of `ConnectionCtx` is equal to the time of established connection: when the connection is closed (no matter by what side), `ConnectionCtx` gets destroyed and memory block returns to its pool.
+Данная реализация сервера демонстрирует простейший пул памяти (класс `Pool`). Каждый accept thread обладает своим пулом памяти, поэтому защита от многопоточности для такого пула не нужна. После установления соединения accept thread формирует `ConnectionCtx` из своего пула. Время жизни `ConnectionCtx` равно времени установленного соединения: как только коннект разрывается (не важно с какой стороны), `ConnectionCtx` разрушается, а блок памяти возвращается в пул.
 
-If the task is delegated to a dedicated worker thread, then that thread owns the task -- during the execution inside worker thread the task is kept in its private memory (`TaskHolder` class). To avoid object copying, theoretically the task can be created already inside the thread's memory with help of placement new operator. However, copy is not the bin problem because it is designed for a task to be as small as possible (comparable to function arguments passed through stack). Current implementation limits maximum size of task to 96 bytes (see `TaskHolder`) at compilation time.
+Если задача делегируется выделенному треду, то тред обладает этой задачей -- во время её исполнения она хранится в блоке памяти треда (класс `TaskHolder`). Чтобы избежать копирования, теоретически задача может быть создана сразу на памяти треда при помощи placement new. Однако, копирование не проблема, поскольку задумано, что размер задачи должен быть небольшим (соизмерим с передачей параметров через стек). Данная реализация ограничивает максимальный размер задачи в 96 байт (см. `TaskHolder`), при попытке использования классов большего размера компиляция завершится ошибкой.
 
-In case task delegated to a worker thread, the life span `ConnectionCtx` is increased to the life span of a task, because the task uses `ConnectionCtx` resources. Wherein `ConnectionCtx` can disconnect peer at any time as long as the resources used by the task will still be available.
+В случае делегирования задачи выделенному треду, время жизни `ConnectionCtx` продлевается до времени жизни задачи, поскольку задача использует ресурсы `ConnectionCtx`. При этом `ConnectionCtx` может преждевременно разрывать соединение -- главное, чтобы ресурсы используемые задачей продолжали оставаться доступны.
 
-#### Server working scheme
-At start a thread pool is created with amount of configured accept and worker threads minus 1 (the main thread is also plays the role of accept thread). All accept threads start to execute `AcceptTask`. `AcceptTask` registers a callback on listen socket read (`accept_conn()`) in event loop and runs that event loop. When a new connection comes new `ConnectionCtx` is created, which registers connection socket in `AcceptTask` event loop. When new data arrives, `ConnectionCtx` processes request with `ReqParser` (`ConnectionCtx` takes also request role, so it can't handle multiple requests). `ReqParser` detects two kinds of queries: `FAST` and `SLOW`. In case of incorrect request `ConnectionCtx` finishes the connection as soon as possible. Example of correct request:
+##### Основная схема работы
+Первоначально создаётся пул тредов, который равен сумме сконфигурированных accept и worker тредов минус 1 (главный тред программы также выступает в роли accept). Все accept-треды начинают исполнять `AcceptTask`. `AcceptTask` регистрирует callback на чтение listen socket (`accept_conn()`) в event loop и запускает event loop. Когда приходит соединение, создаётся `ConnectionCtx` который регистрирует connection socket в event loop у `AcceptTask`. Когда появляются данные, `ConnectionCtx` обрабатывает запрос при помощи `ReqParser` (`ConnectionCtx` также выступает в роли запроса, что означает, что не может быть несколько запросов на одном соединении). `ReqParser` различает два типа запросов: `FAST` и `SLOW`. В случае некорректного запроса `ConnectionCtx` разрывает соединение сразу, как только обнаружит это. Пример корректного запроса:
 ```
 GET /test/fast<CR><LF>
 <CR><LF>
 ```
-In case of `FAST` query, `ConnectionCtx` sends this response and finishes the connection:
+В случае `FAST` `ConnectionCtx` отправляет следующий ответ и разрывает соединение:
 ```
 HTTP/1.1 200 OK
 Connection: close
 Content-Length: 0
 ```
-In case of `SLOW` query, if the amount of worker threads is zero, `ConnectionCtx` does the same as in case of `FAST`. If the amount of worker threads is not zero, the task `SlowTask` is passed to a free worker thread. Inside worker thread `SlowTask` waits some configured amount of time and notifies `ConnectionCtx` about its end. When `ConnectionCtx` sees `SlowTask` end, it generates the above response and finishes the connection.
+В случае `SLOW`, если число сконфигурированных worker тредов равно нулю, `ConnectionCtx` делает то же самое, что и в случае `FAST`. Если число worker тредов не равно нулю, свободному worker-треду передаётся задача `SlowTask`, которая ожидает сконфигурированное количество миллисекунд и оповещает `ConnectionCtx` о своём завершении. Когда `ConnectionCtx` видит завершение `SlowTask`, он формирует вышеуказанный ответ и завершает соединение.
 
-If all worker threads are busy when the new task arrives, then this task is added to a wait queue. When some thread finishes its task, it takes a task from wait queue head (so the queue is a FIFO stack).
+Если все worker треды заняты на момент постановки новой задачи, то задача добавляется в очередь ожидания. Как только какой-либо тред освобождается, он забирает задачу из начала очереди (т.е. очередь это FIFO-стек).
 
-#### Testing
-Current implementation supports two kinds of GET-requests: `/test/fast` and `/test/slow`. The former one does instant reply in accept thread. The latter one delegates processing to a worker thread, where it does delay for a configured amount of time (`--slow-duration` option). After that accept thread generates reply.
+#### Тестирование сервера
+Данная реализация сервера поддерживает два вида GET-запросов: `/test/fast` и `/test/slow`. Первый из них сразу формирует ответ в accept-треде. Второй делегирует обработку в worker thread, где происходит задержка на сконфигурированный промежуток времени (опция `--slow-duration`). После чего accept thread формирует ответ.
 
-In the tests below `--slow-duration` is set to a default of 30 milliseconds, `--port` is set to a default of 9000.
+Здесь и далее, если это не указано явно, опция `--slow-duration` установлена в 30 миллисекунд по умолчанию, опция `--port` установлена в 9000 по умолчанию.
 
-##### 1 request in 1 thread
+##### 1 запрос в 1 потоке
 ```
 midenok@lian:~/src/server-demo/build$ ./server-demo -A 1
 ```
@@ -113,8 +113,8 @@ Waiting:       30   30   0.0     30      30
 Total:         30   30   0.0     30      30
 ```
 
-##### N requests in 1 thread
-For convenience the amount of queries is taken to be around 3 seconds in total. 
+##### N запросов в 1 потоке
+Для наглядности используется число запросов, суммарно равное примерно 3-м секундам.
 ```
 midenok@lian:~$ ab -qn 100000 127.0.0.1:9000/test/fast
 This is ApacheBench, Version 2.3 <$Revision: 1638069 $>
@@ -206,7 +206,7 @@ Percentage of the requests served within a certain time (ms)
   99%     30
  100%     30 (longest request)
  ```
-##### N requests in 10 threads
+##### N запросов в 10 потоках
 ```
 midenok@lian:~/src/server-demo/build$ ./server-demo -A 10
 ```
@@ -304,10 +304,10 @@ Percentage of the requests served within a certain time (ms)
   99%     31
  100%     31 (longest request)
 ```
-As we can see, `Time taken for tests` in case of `FAST` queries was not much changed (2.536 compared to 3.545). This is because the `FAST` query logic is empty and overheads do take the most of time (which is the same in both tests). In case of `SLOW` query this indicator is decreased by 10 times thanks to threads, so the threading works fine.
+Как видим, `Time taken for tests` в случае `FAST` запросов не сильно изменился (2.536 по сравнению с 3.545). Это связано с тем, что в случае `FAST` запросов основновное время занимают накладные расходы, а не логика самого запроса. В случае `SLOW` запросов этот показатель уменьшился в 10 раз, как и ожидалось -- распараллеливание по тредам прошло нормально.
 
-##### Load on `task_queue`
-Thread pool have a task queue. If all threads are busy the task is placed into queue. Let's check how well it works...
+##### Нагрузка на `task_queue`
+У пула тредов есть очередь задач. Если все треды заняты, задача ставится в очередь. Проверим, насколько хорошо это работает...
 ```
 midenok@lian:~/src/server-demo/build$ ./server-demo -C 1000 -A 100 -w 1
 ```
@@ -357,9 +357,9 @@ Percentage of the requests served within a certain time (ms)
   99%   3009
  100%   3016 (longest request)
 ```
-In this case we created a bottleneck of 1 worker thread, what passed all 'SLOW' queries over. Also we created hich concurrency of 100 accept threads, what tested the stability of queue access from multiple threads. As we can see, the total time is 15 seconds which equals to 500 * 30 ms, because all queries was serialized by 1 thread. The queue have done well: `Complete requests: 500`.
+В данном случае, мы создали узкое место 1 worker thread, через которое проходили все `SLOW` запросы. Также, мы создали высокую конкурентность в 100 accept thread для проверки бесперебойности доступа к очереди из нескольких потоков. Как видим, общее время составило 15 секунд, что равно 500 * 30 мс, т.к. все запросы прошли через 1 поток. Очередь отработала нормально: `Complete requests: 500`.
 
-##### Stress-test 1 hour
+##### Стресс-тест 1 час
 ```
 midenok@lian:~/src/server-demo/build$ ./server-demo -C 1000 -w 300
 ```
@@ -409,7 +409,7 @@ Percentage of the requests served within a certain time (ms)
   99%     31
  100%     49 (longest request)
 ```
-The above runs in parallel with:
+Параллельно с:
 ```
 midenok@lian:~$ ab -qt 3600 -n 100000000 -c 100 127.0.0.1:9000/test/fast
 This is ApacheBench, Version 2.3 <$Revision: 1703952 $>
@@ -455,9 +455,9 @@ Percentage of the requests served within a certain time (ms)
   99%      3
  100%     22 (longest request)
 ```
-As shown by stats, stress load of `FAST` had not influence the `SLOW`.
+Как видно из статистики, стресс-нагрузка `FAST` никак не повлияла на работу `SLOW`.
 
-#### Execute options
+#### Опции запуска
 ```
 midenok@lian:~/src/server-demo/build$ ./server-demo --help
 server-demo - Server Example
@@ -483,5 +483,3 @@ Usage:  server-demo [ -<flag> [<val>] | --<name>[{=| }<val>] ]...
 Options are specified by doubled hyphens and their name or by a single
 hyphen and the flag character.
 ```
-
-

@@ -1,0 +1,27 @@
+#!/bin/bash
+set -e
+
+prepare()
+{
+    mkdir -p build
+    cd build
+    cmake -D CMAKE_BUILD_TYPE:STRING=Debug ..
+}
+
+case "$1" in
+clean)
+    rm -rf build
+    shift
+    prepare
+    "$@"
+    ;;
+distclean)
+    rm -rf build
+    ;;
+*)
+    prepare
+    "$@"
+    ;;
+esac
+
+set +e
